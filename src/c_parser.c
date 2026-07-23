@@ -1,42 +1,3 @@
-#include <stdio.h>
-#include <malloc.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-
-// ----- bool -----
-
-typedef char bool;
-#define TRUE 1
-#define FALSE 0
-
-// ------ string -------
-
-bool eqstr(char* s, char* t)
-{
-	return strcmp(s, t) == 0;
-} 
-
-// ----- Strings ----
-
-char* copystr(const char* str)
-{
-	int len = strlen(str);
-	char* new_str = malloc(len + 1);
-	strcpy(new_str, str);
-
-	return new_str;
-}
-
-char* copystrlen(const char* str, int len)
-{
-	char* new_str = malloc(len + 1);
-	memcpy(new_str, str, len + 1);
-
-	return new_str;
-}
-
 // Options
 
 bool opt_trace_parser = FALSE;
@@ -4030,13 +3991,13 @@ bool parse_statement(bool in_block)
 			FAIL_FALSE
 		int from = cur_nr_statements;
 		bool fall_through = FALSE;
-		bool has_default = FALSE;
+		//bool has_default = FALSE;
 		while (token_it->kind == TK_CASE || token_it->kind == TK_DEFAULT)
 		{
 			char *case_comment = get_last_line_comment();
-			int case_labels[100];
-			int nr_case_labels = 0;
-			bool default_case = FALSE;
+			//int case_labels[100];
+			//int nr_case_labels = 0;
+			//bool default_case = FALSE;
 			for (;;)
 			{
 				location_t case_location;
@@ -4050,18 +4011,18 @@ bool parse_statement(bool in_block)
 						FAIL_FALSE
 					statement_p case_stat = add_statement(TK_CASE, 0, &case_location, case_comment, -1);
 					case_stat->expr = expr;
-					if (nr_case_labels < 100)
-						case_labels[nr_case_labels++] = expr_eval(expr);
-					else
-						printf("Error: more than 50 case label\n");
+					//if (nr_case_labels < 100)
+					//	case_labels[nr_case_labels++] = expr_eval(expr);
+					//else
+					//	printf("Error: more than 50 case label\n");
 				}
 				else if (accept_term(TK_DEFAULT))
 				{
 					if (!accept_term(':'))
 						FAIL_FALSE
-					statement_p default_stat = add_statement(TK_DEFAULT, 0, &case_location, case_comment, -1);
-					default_case = TRUE;
-					has_default = TRUE;
+					//statement_p default_stat = add_statement(TK_DEFAULT, 0, &case_location, case_comment, -1);
+					//default_case = TRUE;
+					//has_default = TRUE;
 				}
 				else
 					break;
@@ -4090,14 +4051,14 @@ bool parse_statement(bool in_block)
 		}
 		if (!accept_term('}'))
 			FAIL_FALSE
-		if (has_default)
-		{
-			default_case_nr++;
-		}
-		else
-		{
+		//if (has_default)
+		//{
+		//	default_case_nr++;
+		//}
+		//else
+		//{
 			//fprintf(fcode, "; break\n");
-		}
+		//}
 		statement_p statement = add_statement(TK_SWITCH, label, &location, comment, from);
 		statement->expr = switch_expr;
 		return TRUE;
@@ -4231,88 +4192,3 @@ bool parse_file(const char *input_filename, bool only_preprocess)
 	return TRUE;
 }
 
-// Main
-
-int main(int argc, char *argv[])
-{
-	strcpy(std_include_path, argv[0]);
-	end_std_include_prefix = std_include_path + strlen(std_include_path);
-	while (end_std_include_prefix > std_include_path && end_std_include_prefix[-1] != '/')
-		end_std_include_prefix--;
-	strcpy(end_std_include_prefix, "include/");
-	end_std_include_prefix += 8;
-
-	include_path = malloc(200);
-
-	bool init = FALSE;
-
-	//fcode = stdout;
-	bool only_preprocess = FALSE;
-
-	for (int i = 1; i < argc; i++)
-		if (strcmp(argv[i], "-E") == 0)
-			only_preprocess = TRUE;
-		else if (strcmp(argv[i], "-T") == 0)
-			add_tracing = TRUE;
-		else if (strcmp(argv[i], "-dp") == 0)
-			opt_trace_parser = TRUE;
-		else if (strcmp(argv[i], "-I") == 0 && i + 1 < argc)
-		{
-			strcpy(alt_include_path, argv[++i]);
-			end_alt_include_prefix = alt_include_path + strlen(alt_include_path);
-		}
-		else if (strcmp(argv[i], "-D") == 0 && i + 1 < argc)
-		{
-			i++;
-			const char *s = argv[i];
-			char name[100];
-			int j = 0;
-			for (; *s != '\0' && *s != '='; s++)
-				if (j < 99)
-					name[j++] = *s;
-			name[j] = '\0';
-			env_p env = get_env(name, TRUE);
-			if (*s == '=')
-			{
-				s++;
-				char value[200];
-				j = 0;
-				if (*s == '"')
-				{
-					s++;
-					for (; *s != '"' && *s != '\0'; s++)
-						if (j < 199)
-							value[j++] = *s;
-					value[j] = '\0';
-					env->tokens = new_str_token(value);
-				}
-				else
-				{
-					for (; '0' <= *s && *s <= '9'; s++)
-						if (j < 199)
-							value[j++] = *s;
-					value[j] = '\0';
-					env->tokens = new_int_token(value);
-				}
-			}
-		}
-		else
-		{
-			if (!init)
-			{
-				define_base_types();
-				add_predefined_types();
-				init = TRUE;
-			}
-
-			if (!parse_file(argv[i], only_preprocess))
-				return 1;
-			for (int i = 0; i < cur_nr_statements; i++)
-				print_statement(cur_statements[i], 0);
-		}
-
-	if (only_preprocess)
-		return 0;
-
-	return 0;
-}
