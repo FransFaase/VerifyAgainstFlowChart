@@ -6,13 +6,18 @@ This program is being developed for a particular commercial use case and might n
 
 ## Status
 
-A first version of the program to parse the input in `c_parser.c` has been implemented
-and to parse yED flowcharts stored in graphml files in `flowchart_parser.c`.
+The following has been implemented"
+- `c_parser.c`: parse a C program
+- `flowchart_parser.c`: parses the flow-chart in a `graphml` file
+- `c_blocks.c`: convert parsed program into flow-chart similar blocks
 
 Call it with `verifyafc [-I <include folder>] [<c filename>|<graphml filename]*`. System include
 files are read from the `include` folder relative to the executable. So, place it in the root folder of
 the repository to the use the drop-in files `include` folder of the repository.
 
-The program prints lots of (debug) information about the parsed files.
+The program prints the parsed blocks.
 
 To build, issue `gcc -Wall -Werror verifyafc.c -o ../verifyafc` in `src` folder.
+Then run from that location (or copy the `include` folder to location from which it is
+executed if the C source depends on system include files).
+

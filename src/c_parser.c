@@ -2109,16 +2109,27 @@ const char *token_it_pos(void)
 	return token_it_pos_buffer;
 }
 
+typedef struct location_s location_t, *location_p;
+struct location_s
+{
+	const char *filename;
+	int line;
+	int column;
+};
+
+void save_location(location_p location, token_iterator_p token_it)
+{
+	location->filename = token_it->filename;
+	location->line = token_it->line;
+	location->column = token_it->column;
+}
+
 #ifdef LOCATION_IN_EXPR
-const char *filename_for_expr;
-int line_for_expr;
-int column_for_expr;
+location_t location_for_expr;
 
 void store_pos_for_expr(void)
 {
-	filename_for_expr = token_it->filename;
-	line_for_expr = token_it->line;
-	column_for_expr = token_it->column;
+	save_location(&location_for_expr, token_it);
 }
 
 static char expr_pos_buffer[101];
@@ -2156,9 +2167,9 @@ expr_p new_expr(int kind, int nr_children)
 		expr->children[i] = NULL;
 	expr->type = NULL;
 #ifdef LOCATION_IN_EXPR
-	expr->filename = filename_for_expr;
-	expr->line = line_for_expr;
-	expr->column = column_for_expr;
+	expr->filename = location_for_expr.filename;
+	expr->line = location_for_expr.line;
+	expr->column = location_for_expr.column;
 #endif
 	return expr;
 }
@@ -2409,16 +2420,6 @@ struct statement_s
 	statement_p children[0];
 };
 
-typedef struct location_s location_t, *location_p;
-struct location_s
-{
-#ifdef LOCATION_IN_EXPR
-	const char *filename;
-	int line;
-	int column;
-#endif
-};
-
 statement_p cur_statements[1000];
 int cur_nr_statements = 0;
 
@@ -2440,9 +2441,11 @@ statement_p add_statement(int kind, label_p label, location_p location, char *co
 	statement->goto_label = 0;
 	statement->comment = comment;
 #ifdef LOCATION_IN_EXPR
-	statement->filename = location != NULL ? location->filename : filename_for_expr;
-	statement->line = location != NULL ? location->line : line_for_expr;
-	statement->column = location != NULL ? location->column : column_for_expr;
+	if (location == NULL)
+		location = &location_for_expr;
+	statement->filename = location->filename;
+	statement->line = location->line;
+	statement->column = location->column;
 #endif
 	statement->nr_children = nr_children;
 	for (int i = 0; i < nr_children; i++)
@@ -2463,7 +2466,7 @@ void print_statement(statement_p statement, int indent)
 		return;
 	}
 	if (statement->label != NULL)
-		printf("%s: ", statement->label->name);
+		printf("%s: ", statement->label->name == NULL ? "NULL" : statement->label->name);
 	if (' ' < statement->kind && statement->kind < 127)
 		printf("%c", statement->kind);
 	else switch(statement->kind)
@@ -2491,13 +2494,6 @@ void print_statement(statement_p statement, int indent)
 	printf("\n");
 	for (int i = 0; i < statement->nr_children; i++)
 		print_statement(statement->children[i], indent + 4);
-}
-
-void save_location(location_p location)
-{
-	location->filename = filename_for_expr;
-	location->line = line_for_expr;
-	location->column = column_for_expr;
 }
 
 // Parse functions
@@ -3400,7 +3396,7 @@ bool parse_declaration(bool is_param)
 	do
 	{
 		location_t location;
-		save_location(&location);
+		save_location(&location, token_it);
 		int from = cur_nr_statements;
 		type_p type = type_specifier;
 		while (accept_term('*'))
@@ -3876,7 +3872,7 @@ bool parse_statement(bool in_block)
 		break;
 	}
 	location_t location;
-	save_location(&location);
+	save_location(&location, token_it);
 	if (accept_term(TK_IF))
 	{
 		if (!accept_term('('))
@@ -4001,7 +3997,7 @@ bool parse_statement(bool in_block)
 			for (;;)
 			{
 				location_t case_location;
-				save_location(&case_location);
+				save_location(&case_location, token_it);
 				if (accept_term(TK_CASE))
 				{
 					expr_p expr = parse_expr(); 
@@ -4105,7 +4101,6 @@ bool parse_statement(bool in_block)
 
 bool parse_statements(location_p location)
 {
-	clear_last_line_comment();
 	int from = cur_nr_statements;
 	decl_p save_ident_decls = cur_ident_decls;
 	do

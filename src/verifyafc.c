@@ -45,6 +45,10 @@ char* copystrlen(const char* str, int len)
 
 #include "flowchart_parser.c"
 
+// Include C blocks
+
+#include "c_blocks.c"
+
 // Main
 
 bool has_extention(const char *filename, const char *ext)
@@ -128,13 +132,13 @@ int main(int argc, char *argv[])
 
 			if (!parse_file(argv[i], only_preprocess))
 				return 1;
-			for (int i = 0; i < cur_nr_statements; i++)
-				print_statement(cur_statements[i], 0);
+			//for (int i = 0; i < cur_nr_statements; i++)
+			//	print_statement(cur_statements[i], 0);
 		}
 		else if (has_extention(argv[i], ".graphml"))
 		{
 			parse_flowchart(argv[i]);
-			print_flowchart();
+			//print_flowchart();
 		}
 		else
 		{
@@ -145,5 +149,7 @@ int main(int argc, char *argv[])
 	if (only_preprocess)
 		return 0;
 
+	construct_blocks();
+	
 	return 0;
 }
