@@ -81,7 +81,7 @@ int parse_node_id(const char *s)
         int id = 0;
         while ('0' <= *s && *s <= '9')
             id = 10 * id + *s++ - '0';
-        if (*s == '\0' && id > 0)
+        if (*s == '\0' && id >= 0)
             return id;
     }
     return -1;
@@ -96,7 +96,7 @@ void parse_flowchart(const char *filename)
 
     while (xmliter.state != '\0')
     {
-        printf("%*.*s", xmliter.level, xmliter.level, "");
+        //printf("%*.*s", xmliter.level, xmliter.level, "");
         if (xmliter_accept_tag(&xmliter, "node"))
         {
             int id = -1;
@@ -131,15 +131,15 @@ void parse_flowchart(const char *filename)
                 else if (xmliter_accept_tag(&xmliter, "y:NodeLabel"))
                 {
                     for (; xmliter.state == 'a'; xmliter_next(&xmliter))
-                    {}
+                        {}
                     if (xmliter.state == 't')
                         name = copystr(xmliter.value);
                 }
                 else
                     xmliter_next(&xmliter);
-            if (id > 0 && node_type != NODE_TYPE_NONE)
+            if (id >= 0 && node_type != NODE_TYPE_NONE)
             {
-                printf("ADD_NODE %d %d '%s'\n", id, node_type, name);
+                //printf("ADD_NODE %d %d '%s'\n", id, node_type, name);
                 add_node(id, name, node_type);
             }
         }
@@ -166,24 +166,24 @@ void parse_flowchart(const char *filename)
                     xmliter_next(&xmliter);
             if (source != -1 && target != -1)
             {
-                printf("ADD_EDGE %d %d '%s'\n", source, target, name);
+                //printf("ADD_EDGE %d %d '%s'\n", source, target, name);
                 add_edge(source, target, name);
             }
         }
         else if (xmliter.state == '!')
-            printf("Open %s\n", xmliter.value);
+            ; //printf("Open %s\n", xmliter.value);
         else if (xmliter.state == '?')
-            printf("Open %s\n", xmliter.value);
+            ; //printf("Open %s\n", xmliter.value);
         else if (xmliter.state == 'o')
-            printf("Open %s\n", xmliter.tag);
+            ; //printf("Open %s\n", xmliter.tag);
         else if (xmliter.state == 'c')
-            printf("Close\n");
+            ; //printf("Close\n");
         else if (xmliter.state == 'a')
-            printf("Attr %s='%s'\n", xmliter.tag, xmliter.value);
+            ; //printf("Attr %s='%s'\n", xmliter.tag, xmliter.value);
         else if (xmliter.state == 't')
-            printf("Text '%s'\n", xmliter.value);
+            ; //printf("Text '%s'\n", xmliter.value);
         else
-            printf("#%c \n", xmliter.state);
+            ; //printf("#%c \n", xmliter.state);
         xmliter_next(&xmliter);
     }
 }

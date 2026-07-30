@@ -4016,7 +4016,7 @@ bool parse_statement(bool in_block)
 				{
 					if (!accept_term(':'))
 						FAIL_FALSE
-					//statement_p default_stat = add_statement(TK_DEFAULT, 0, &case_location, case_comment, -1);
+					add_statement(TK_DEFAULT, 0, &case_location, case_comment, -1);
 					//default_case = TRUE;
 					//has_default = TRUE;
 				}

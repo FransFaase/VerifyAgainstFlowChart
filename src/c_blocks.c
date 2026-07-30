@@ -13,6 +13,12 @@ struct block_s
     block_p next;
     block_p alt;
     transition_p in_trans;
+    node_p node;
+    // For generating flow-chart
+    int output_nr;
+    int x;
+    int y;
+    int escape;
     block_p next_all;
 };
 
@@ -33,6 +39,11 @@ block_p new_block(void)
     block->next = NULL;
     block->alt = NULL;
     block->in_trans = NULL;
+    block->node = NULL;
+    block->output_nr = 0;
+    block->x = -1;
+    block->y = 0;
+    block->escape = -1;
     block->next_all = NULL;
     return block;
 }
@@ -192,7 +203,7 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
             block_p next_block = NULL;
             if (i + nr_case_stat < statement->nr_children)
                 next_block = new_block();
-            block_set_next(block, next_block != NULL ? next_block : block);
+            block_set_next(block, next_block != NULL ? next_block : next);
             
             block_p child_block = new_block();
             block_set_alt(block, child_block);
@@ -292,7 +303,10 @@ void construct_blocks(void)
             construct_blocks_from_statements(statement->children, statement->nr_children, block, NULL, NULL);
         }
     }
+}
 
+void print_blocks(void)
+{
     printf("\n\n");
     for (block_p block = all_blocks; block != NULL; block = block->next_all)
     {

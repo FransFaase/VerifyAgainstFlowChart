@@ -49,6 +49,14 @@ char* copystrlen(const char* str, int len)
 
 #include "c_blocks.c"
 
+// Include compare
+
+#include "compare.c"
+
+// Include compare
+
+#include "output_flowchart.c"
+
 // Main
 
 bool has_extention(const char *filename, const char *ext)
@@ -60,6 +68,11 @@ bool has_extention(const char *filename, const char *ext)
 
 int main(int argc, char *argv[])
 {
+	if (argc <= 1)
+	{
+		printf("Usage:\n\tverifyafc [-I <include folder>] [<c filename>|<graphml filename|-o <graphml filename>]*\n");
+		return 0;
+	}
 	strcpy(std_include_path, argv[0]);
 	end_std_include_prefix = std_include_path + strlen(std_include_path);
 	while (end_std_include_prefix > std_include_path && end_std_include_prefix[-1] != '/')
@@ -74,19 +87,21 @@ int main(int argc, char *argv[])
 	//fcode = stdout;
 	bool only_preprocess = FALSE;
 
+	char *output_filename = NULL;
+
 	for (int i = 1; i < argc; i++)
-		if (strcmp(argv[i], "-E") == 0)
+		if (eqstr(argv[i], "-E"))
 			only_preprocess = TRUE;
-		else if (strcmp(argv[i], "-T") == 0)
+		else if (eqstr(argv[i], "-T"))
 			add_tracing = TRUE;
-		else if (strcmp(argv[i], "-dp") == 0)
+		else if (eqstr(argv[i], "-dp"))
 			opt_trace_parser = TRUE;
-		else if (strcmp(argv[i], "-I") == 0 && i + 1 < argc)
+		else if (eqstr(argv[i], "-I") && i + 1 < argc)
 		{
 			strcpy(alt_include_path, argv[++i]);
 			end_alt_include_prefix = alt_include_path + strlen(alt_include_path);
 		}
-		else if (strcmp(argv[i], "-D") == 0 && i + 1 < argc)
+		else if (eqstr(argv[i], "-D") && i + 1 < argc)
 		{
 			i++;
 			const char *s = argv[i];
@@ -121,6 +136,8 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
+		else if (eqstr(argv[i], "-o") && i + 1 < argc)
+			output_filename = argv[++i];
 		else if (has_extention(argv[i], ".c"))
 		{
 			if (!init)
@@ -150,6 +167,11 @@ int main(int argc, char *argv[])
 		return 0;
 
 	construct_blocks();
+
+	if (output_filename != NULL)
+		output_flowchart(output_filename);
+	else
+		compare_all();
 	
 	return 0;
 }
