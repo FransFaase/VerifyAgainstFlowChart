@@ -79,6 +79,28 @@ void set_x_offset(block_p block, int offset)
     set_x_offset(block->alt, offset + lane_width);
 }
 
+void output_text(FILE *f, const char *s)
+{
+    if (s == NULL)
+        return;
+    for (; *s != '\0'; s++)
+        if (*s == '<')
+            fprintf(f, "&lt;");
+        else if (*s == '>')
+            fprintf(f, "&gt;");
+        else if (*s == '&')
+            fprintf(f, "&amp;");
+        else if (*s == ' ' || *s == '\t')
+        {
+            while (s[1] == ' ' || s[1] == ' ')
+                s++;
+            if (s[1] != '\0')
+                fprintf(f, " ");
+        }
+        else
+            fprintf(f, "%c", *s);
+}
+
 void output_flowchart(const char *filename)
 {
     FILE *f = fopen(filename, "w");
@@ -209,14 +231,18 @@ void output_flowchart(const char *filename)
             "<y:Geometry height=\"%d\" width=\"%d\" x=\"%d\" y=\"%d\"/>\n"
             "<y:Fill color=\"#E8EEF7\" color2=\"#B7C9E3\" transparent=\"false\"/>\n"
             "<y:BorderStyle color=\"#000000\" type=\"line\" width=\"1.0\"/>\n"
-            "<y:NodeLabel alignment=\"center\" autoSizePolicy=\"content\" fontFamily=\"Dialog\" fontSize=\"12\" fontStyle=\"plain\" hasBackgroundColor=\"false\" hasLineColor=\"false\" height=\"17.96875\" horizontalTextPosition=\"center\" iconTextGap=\"4\" modelName=\"custom\" textColor=\"#000000\" verticalTextPosition=\"bottom\" visible=\"true\" width=\"104.453125\" x=\"21.2734375\" xml:space=\"preserve\" y=\"11.015625\">%s<y:LabelModel><y:SmartNodeLabelModel distance=\"4.0\"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX=\"0.0\" labelRatioY=\"0.0\" nodeRatioX=\"0.0\" nodeRatioY=\"0.0\" offsetX=\"0.0\" offsetY=\"0.0\" upX=\"0.0\" upY=\"-1.0\"/></y:ModelParameter></y:NodeLabel>\n"
-            "</y:GenericNode>\n"
-            "</data>\n"
-            "</node>\n", block->output_nr, 
+            "<y:NodeLabel alignment=\"center\" autoSizePolicy=\"content\" fontFamily=\"Dialog\" fontSize=\"12\" fontStyle=\"plain\" hasBackgroundColor=\"false\" hasLineColor=\"false\" height=\"17.96875\" horizontalTextPosition=\"center\" iconTextGap=\"4\" modelName=\"custom\" textColor=\"#000000\" verticalTextPosition=\"bottom\" visible=\"true\" width=\"104.453125\" x=\"21.2734375\" xml:space=\"preserve\" y=\"11.015625\">",
+                block->output_nr, 
                 block->in_trans == NULL ? "start1" :
                 block->next == NULL ? "terminator" :
                 block->alt != NULL ? "decision" : "process",
-                height, width, block->x, block->y, block->comment == NULL ? "" : block->comment);
+                height, width, block->x, block->y);
+        output_text(f, block->comment);
+        fprintf(f,
+            "<y:LabelModel><y:SmartNodeLabelModel distance=\"4.0\"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX=\"0.0\" labelRatioY=\"0.0\" nodeRatioX=\"0.0\" nodeRatioY=\"0.0\" offsetX=\"0.0\" offsetY=\"0.0\" upX=\"0.0\" upY=\"-1.0\"/></y:ModelParameter></y:NodeLabel>\n"
+            "</y:GenericNode>\n"
+            "</data>\n"
+            "</node>\n");
     }
     for (block_p block = all_blocks; block != NULL; block = block->next_all)
     {
