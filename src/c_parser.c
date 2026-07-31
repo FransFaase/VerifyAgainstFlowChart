@@ -3537,7 +3537,8 @@ bool parse_declaration(bool is_param)
 			}
 			if (!is_param && cur_struct_or_union == NULL && decl->storage_type != ST_TYPEDEF && type->kind != TYPE_KIND_FUNCTION)
 			{
-				statement_p statement = add_statement('D', NULL, &location, NULL, from);
+				char *comment = get_last_line_comment();
+				statement_p statement = add_statement('D', NULL, &location, comment, from);
 				statement->decl = decl;
 			}
 		}
@@ -3936,13 +3937,9 @@ bool parse_statement(bool in_block)
 		if (!accept_term('('))
 			FAIL_FALSE
 		int from = cur_nr_statements;
-		statement_p init_stat = add_statement('i', 0, &location, NULL, -1);
-		if (parse_declaration(FALSE))
-			init_stat->decl = cur_decls;
-		else
+		if (!parse_declaration(FALSE))
 		{
-			init_stat->decl = cur_decls;
-			init_stat->expr = parse_expr();
+			add_statement('i', 0, &location, NULL, -1);
 			if (!accept_term(';'))
 				FAIL_FALSE
 		}

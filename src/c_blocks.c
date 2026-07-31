@@ -14,7 +14,7 @@ struct block_s
     block_p alt;
     transition_p in_trans;
     node_p node;
-    // For generating flow-chart
+    // For generating a flowchart
     int output_nr;
     int x;
     int y;
@@ -50,16 +50,29 @@ block_p new_block(void)
 
 block_p all_blocks = NULL;
 
-void add_block(block_p block)
+void add_block_at_start_line(block_p block)
 {
-    if (block->start_line != 0 || block->nr_statements == 0)
-        return;
-    block->start_line = block->statements[0]->line;
     block_p *ref_block = &all_blocks;
     while (*ref_block != NULL && (*ref_block)->start_line <= block->start_line)
         ref_block = &(*ref_block)->next_all;
     block->next_all = *ref_block;
     *ref_block = block;
+}
+
+void add_block(block_p block)
+{
+    if (block->nr_statements == 0)
+    {
+        printf("block has no statements\n");
+        return;
+    }
+    if (block->start_line != 0)
+    {
+        printf("block already added on line %d\n", block->start_line);
+        return;
+    }
+    block->start_line = block->statements[0]->line;
+    add_block_at_start_line(block);
 }
 
 void block_add_transition(block_p from, block_p to)
@@ -225,8 +238,53 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
             printf("Error: break outside loop or switch\n");
         block_set_next(block, next_break);
     }
+    else if (statement->kind == TK_FOR)
+    {
+        printf("For statement %d\n", statement->nr_children);
+        block->comment = statement->comment;
+        if (statement->children[0] != NULL)
+        {
+            block_p for_init_block = block;
+            for_init_block->comment = "Init for";
+            for_init_block->statements = &statement->children[0];
+            for_init_block->nr_statements = 1;
+            add_block(for_init_block);
+            block = new_block();
+            block_set_next(for_init_block, block);
+        }
+        block->cond = statement->expr;
+        block->comment = "condition";
+        block->statements = statements;
+        block->nr_statements = 1;
+        block_set_next(block, next);
+        add_block(block);
+        block_p for_next_block = block;
+        if (statement->children[1] != NULL)
+        {
+            for_next_block = new_block();
+            for_next_block->comment = "Next for";
+            for_next_block->statements = &statement->children[1];
+            for_next_block->nr_statements = 1;
+            block_set_next(for_next_block, block);
+        }
+        if (empty_statement(statement->children[2]))
+            printf("Warning: Empty for\n");
+        else
+        {
+            block_set_alt(block, new_block());
+            printf("for body:\n");
+            construct_blocks_from_statement(&statement->children[2], block->alt, for_next_block, next);
+            printf("end for body\n");
+        }
+        if (for_next_block != block)
+        {
+            for (block_p body_block = block->alt; body_block != for_next_block; body_block = body_block->next)
+                for_next_block->start_line = body_block->start_line;
+            add_block_at_start_line(for_next_block);
+        }
+    }
     else
-        printf("Expression type %d is not supported\n", statement->kind);
+        printf("Statement type %d is not supported\n", statement->kind);
 }
 
 bool complext_statement_kind(int kind)
