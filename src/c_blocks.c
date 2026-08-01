@@ -63,12 +63,12 @@ void add_block(block_p block)
 {
     if (block->nr_statements == 0)
     {
-        printf("block has no statements\n");
+        printf("Error: block has no statements\n");
         return;
     }
     if (block->start_line != 0)
     {
-        printf("block already added on line %d\n", block->start_line);
+        printf("Warning: block already added on line %d\n", block->start_line);
         return;
     }
     block->start_line = block->statements[0]->line;
@@ -240,12 +240,12 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
     }
     else if (statement->kind == TK_FOR)
     {
-        printf("For statement %d\n", statement->nr_children);
         block->comment = statement->comment;
         if (statement->children[0] != NULL)
         {
             block_p for_init_block = block;
-            for_init_block->comment = "Init for";
+            if (for_init_block->comment == NULL)
+                for_init_block->comment = "(For init)";
             for_init_block->statements = &statement->children[0];
             for_init_block->nr_statements = 1;
             add_block(for_init_block);
@@ -253,7 +253,8 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
             block_set_next(for_init_block, block);
         }
         block->cond = statement->expr;
-        block->comment = "condition";
+        if (block->comment == NULL)
+            block->comment = "(For condition)";
         block->statements = statements;
         block->nr_statements = 1;
         block_set_next(block, next);
@@ -262,7 +263,7 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
         if (statement->children[1] != NULL)
         {
             for_next_block = new_block();
-            for_next_block->comment = "Next for";
+            for_next_block->comment = "(For next)";
             for_next_block->statements = &statement->children[1];
             for_next_block->nr_statements = 1;
             block_set_next(for_next_block, block);
@@ -272,9 +273,7 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
         else
         {
             block_set_alt(block, new_block());
-            printf("for body:\n");
             construct_blocks_from_statement(&statement->children[2], block->alt, for_next_block, next);
-            printf("end for body\n");
         }
         if (for_next_block != block)
         {
@@ -333,7 +332,8 @@ void construct_blocks_from_statements(statement_p *statements, int nr_statements
                 if (block->statements[j]->kind == TK_BREAK)
                 {
                     has_break = TRUE;
-                    construct_blocks_from_statement(&block->statements[j], block, next_for_block, next_break);
+                    block_set_next(block, next_break);
+                    break;
                 }
             if (!has_break)
                 block_set_next(block, next_for_block);

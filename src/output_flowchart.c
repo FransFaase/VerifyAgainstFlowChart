@@ -59,7 +59,7 @@ void output_edge(FILE *f, block_p from, block_p to, edge_type_t edge_type)
         fprintf(f, " segment=\"0\"/></y:ModelParameter><y:PreferredPlacementDescriptor angle=\"0.0\" angleOffsetOnRightSide=\"0\" angleReference=\"absolute\" angleRotationOnRightSide=\"co\" distance=\"-1.0\" frozen=\"true\" placement=\"anywhere\" side=\"anywhere\" sideReference=\"relative_to_edge_flow\"/></y:EdgeLabel>\n");
     }
     fprintf(f,
-        "<y:BendStyle smoothed=\"false\"/>\n"
+        "<y:BendStyle smoothed=\"true\"/>\n"
         "</y:PolyLineEdge>\n"
         "</data>\n"
         "</edge>\n");
@@ -105,7 +105,10 @@ void output_flowchart(const char *filename)
 {
     FILE *f = fopen(filename, "w");
     if (f == NULL)
+    {
+        printf("Cannot write to '%s'\n", filename);
         return;
+    }
     fprintf(f, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"
             "<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\" xmlns:java=\"http://www.yworks.com/xml/yfiles-common/1.0/java\" xmlns:sys=\"http://www.yworks.com/xml/yfiles-common/markup/primitives/2.0\" xmlns:x=\"http://www.yworks.com/xml/yfiles-common/markup/2.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:y=\"http://www.yworks.com/xml/graphml\" xmlns:yed=\"http://www.yworks.com/xml/yed/3\" xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd\">\n"
             "<!--Created by yEd 3.24-->\n"
