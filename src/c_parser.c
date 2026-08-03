@@ -2216,6 +2216,7 @@ typedef enum {
 	ST_STATIC,
 	ST_TYPEDEF,
 	ST_CONST,
+	ST_EXTERN,
 } storage_type_e;
 
 struct decl_s
@@ -3364,6 +3365,7 @@ bool parse_declaration(bool is_param)
 		}
 		else if (accept_term(TK_EXTERN))
 		{
+			storage_type = ST_EXTERN;
 		}
 		else if (accept_term(TK_INLINE))
 		{
@@ -3518,7 +3520,8 @@ bool parse_declaration(bool is_param)
 			}
 			if (prev_decl != NULL && type->kind != TYPE_KIND_FUNCTION)
 			{
-				fprintf(stderr, "%s: Warning: declaration of %s repeated\n", token_it_pos(), decl->name);
+				if (prev_decl->storage_type != ST_EXTERN || storage_type != ST_NONE)
+					fprintf(stderr, "%s: Warning: declaration of %s repeated\n", token_it_pos(), decl->name);
 				remove_decl(decl);
 			}
 			decl->type = type;
@@ -4115,13 +4118,6 @@ void add_base_type(const char *name, type_p base_type)
 {
 	add_decl(DK_IDENT, name, base_type);
 	cur_ident_decls->storage_type = ST_TYPEDEF;
-}
-
-void add_function(const char *name, type_p result_type)
-{
-	type_p type = new_type(TYPE_KIND_FUNCTION, 1);
-	type->members[0] = result_type;
-	add_decl(DK_IDENT, name, type);
 }
 
 void add_predefined_types(void)
