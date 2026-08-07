@@ -494,8 +494,16 @@ struct token_iterator_s
 	char *filename;
 	int line;
 	int column;
+	token_iterator_p parent;
 	token_next_p next;
 };
+
+token_iterator_p root_token_iterator(token_iterator_p token_it)
+{
+	while (token_it->parent != NULL)
+		token_it = token_it->parent;
+	return token_it;
+}
 
 // The tokenizer iterator
 
@@ -1001,6 +1009,7 @@ tokenizer_p new_tokenizer(char_iterator_p char_iterator)
 	tokenizer->base.token = malloc(MAX_TOKEN_LEN);
 	tokenizer->base.filename = NULL;
 	tokenizer->base.next = tokenizer_next;
+	tokenizer->base.parent = NULL;
 	return tokenizer;
 }
 
@@ -1547,6 +1556,7 @@ conditional_iterator_p new_conditional_iterator(include_iterator_p source_it, to
 	it->_skip_level = 0;
 	it->_if_level = 0;
 	it->base.next = conditional_iterator_next;
+	it->base.parent = NULL;
 	return it;
 }
 
@@ -1706,6 +1716,7 @@ token_iterator_p new_exapnd_macro_iterator(env_p macro, tokens_p *args, token_it
 {
 	expand_macro_iterator_p it = malloc(sizeof(struct expand_macro_iterator_s));
 	it->base.next = expand_macro_iterator_next;
+	it->base.parent = rest_it;
 	it->param_tokens = NULL;
 	it->tokens = macro->tokens;
 	it->_rest_it = rest_it;
@@ -1792,6 +1803,7 @@ token_iterator_p expand_iterator_next(token_iterator_p token_it, bool dummy)
 			}
 		}
 		it->_source_it = source_it;
+		it->base.parent = source_it;
 	}
 	
 	token_it->kind = source_it->kind;
@@ -1809,6 +1821,7 @@ expand_iterator_p new_expand_iterator(token_iterator_p source_it)
 	expand_iterator_p it = malloc(sizeof(struct expand_iterator_s));
 	it->_source_it = source_it;
 	it->base.next = expand_iterator_next;
+	it->base.parent = source_it;
 	return it;
 }
 
@@ -3398,7 +3411,7 @@ bool parse_declaration(bool is_param)
 	do
 	{
 		location_t location;
-		save_location(&location, token_it);
+		save_location(&location, root_token_iterator(token_it));
 		int from = cur_nr_statements;
 		type_p type = type_specifier;
 		while (accept_term('*'))
@@ -3876,7 +3889,7 @@ bool parse_statement(bool in_block)
 		break;
 	}
 	location_t location;
-	save_location(&location, token_it);
+	save_location(&location, root_token_iterator(token_it));
 	if (accept_term(TK_IF))
 	{
 		if (!accept_term('('))
@@ -3997,7 +4010,7 @@ bool parse_statement(bool in_block)
 			for (;;)
 			{
 				location_t case_location;
-				save_location(&case_location, token_it);
+				save_location(&case_location, root_token_iterator(token_it));
 				if (accept_term(TK_CASE))
 				{
 					expr_p expr = parse_expr(); 
