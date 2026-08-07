@@ -131,7 +131,7 @@ void construct_blocks_from_statements(statement_p *statement, int nr_statements,
 
 bool case_or_default_statement(statement_p statement) { return statement->kind == TK_CASE || statement->kind == TK_DEFAULT; }
 
-void construct_blocks_from_statement(statement_p *statements, block_p block, block_p next, block_p next_break)
+void construct_blocks_from_statement(statement_p *statements, block_p block, block_p next, block_p next_break, bool any)
 {
     //printf("%*.*sconstruct_blocks_from_statement %d %d\n", indent, indent, "", block->nr, next == NULL ? -1 : next->nr);
     statement_p statement = statements[0];
@@ -162,14 +162,14 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
         else
         {
             block_set_alt(block, new_block());
-            construct_blocks_from_statement(&statement->children[0], block->alt, next, next_break);
+            construct_blocks_from_statement(&statement->children[0], block->alt, next, next_break, TRUE);
         }
         if (statement->nr_children == 1 || empty_statement(statement->children[1]))
             block_set_next(block, next);
         else
         {
             block_set_next(block, new_block());
-            construct_blocks_from_statement(&statement->children[1], block->next, next, next_break);
+            construct_blocks_from_statement(&statement->children[1], block->next, next, next_break, TRUE);
         }
     }
     else if (statement->kind == TK_WHILE)
@@ -182,7 +182,7 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
         else
         {
             block_set_alt(block, new_block());
-            construct_blocks_from_statement(&statement->children[0], block->alt, block, next);
+            construct_blocks_from_statement(&statement->children[0], block->alt, block, next, TRUE);
         }
         block_set_next(block, next);
     }
@@ -273,7 +273,7 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
         else
         {
             block_set_alt(block, new_block());
-            construct_blocks_from_statement(&statement->children[2], block->alt, for_next_block, next);
+            construct_blocks_from_statement(&statement->children[2], block->alt, for_next_block, next, TRUE);
         }
         if (for_next_block != block)
         {
@@ -282,8 +282,14 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
             add_block_at_start_line(for_next_block);
         }
     }
+    else if (any)
+    {
+        block->comment = statement->comment;
+        add_block(block);
+        block_set_next(block, next);
+    }
     else
-        printf("Statement type %d is not supported\n", statement->kind);
+        printf("%s:%d Statement type %d is not supported\n", statement->filename, statement->line, statement->kind);
 }
 
 bool complext_statement_kind(int kind)
@@ -298,6 +304,8 @@ void construct_blocks_from_statements(statement_p *statements, int nr_statements
     for (int i = 0; i < nr_statements; i++)
     {
         statement_p child = statements[i];
+        if (empty_statement(child))
+            continue;
         //printf("%*.*s- Process statement %s:%d.%d %d %s\n", indent, indent, "", child->filename, child->line, child->column, child->kind, child->comment == NULL ? "" : child->comment);
         block->statements = &statements[i];
         block->nr_statements = 1;
@@ -323,7 +331,7 @@ void construct_blocks_from_statements(statement_p *statements, int nr_statements
         }
         block_p next_for_block = next_block != NULL ? next_block : next;
         if (complext_statement_kind(child->kind))
-            construct_blocks_from_statement(&statements[i], block, next_for_block, next_break);
+            construct_blocks_from_statement(&statements[i], block, next_for_block, next_break, FALSE);
         else
         {
             add_block(block);
