@@ -1842,7 +1842,7 @@ token_iterator_p token_it = NULL;
 
 void output_preprocessor(const char *filename)
 {
-	FILE *fout = fopen(filename, "w");
+	FILE *fout = filename != NULL ? fopen(filename, "w") : stdout;
 	if (fout == NULL)
 		return;
 	token_it = token_it->next(token_it, TRUE);
@@ -1927,6 +1927,7 @@ void output_preprocessor(const char *filename)
 	}
 
 	fprintf(fout, "\n\nDone\n");	
+	if (fout != stdout) 
 	fclose(fout);
 }
 
