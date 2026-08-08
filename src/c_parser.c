@@ -468,6 +468,19 @@ include_iterator_p new_include_iterator(char_iterator_p include_it)
 #define TK_UNION		1025
 #define TK_UNSIGNED		1026
 #define TK_VOID			1027
+#define TK_VOLATILE		1028   
+#define TK_WHILE		1029
+#define TK_H_ELSE		1030
+#define TK_H_ELIF		1031
+#define TK_H_ENDIF		1032
+#define TK_H_DEFINE		1033
+#define TK_DEFINED		1034
+#define TK_H_IF			1035
+#define TK_H_IFDEF		1036
+#define TK_H_IFNDEF		1037
+#define TK_H_INCLUDE	1038
+#define TK_H_UNDEF		1039
+#define TK_H_ERROR		1040
 #define TK_H_PRAGMA     1041
 
 // The base token iterator
@@ -702,6 +715,7 @@ token_iterator_p tokenizer_next(token_iterator_p token_it, bool skip_nl)
 		else if (eqstr("union",    token_it->token)) token_it->kind = TK_UNION;
 		else if (eqstr("unsigned", token_it->token)) token_it->kind = TK_UNSIGNED;
 		else if (eqstr("void",     token_it->token)) token_it->kind = TK_VOID;
+		else if (eqstr("volatile", token_it->token)) token_it->kind = TK_VOLATILE;
 		else if (eqstr("while",    token_it->token)) token_it->kind = TK_WHILE;
 	}
 	else if ('0' <= ch && ch <= '9')
@@ -3380,6 +3394,9 @@ bool parse_declaration(bool is_param)
 		else if (accept_term(TK_INLINE))
 		{
 		}
+		else if (accept_term(TK_VOLATILE))
+		{
+		}
 		else if (accept_term(TK_STATIC))
 		{
 			if (inside_function)
@@ -3585,6 +3602,8 @@ type_p parse_enum_specifier(void);
 
 type_p parse_type_specifier(storage_type_e *ref_storage_type)
 {
+	accept_term(TK_VOLATILE);
+
 	if (accept_term(TK_CONST))
 	{
 		if (ref_storage_type != NULL) *ref_storage_type = ST_CONST;
