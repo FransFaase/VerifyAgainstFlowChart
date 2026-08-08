@@ -468,18 +468,7 @@ include_iterator_p new_include_iterator(char_iterator_p include_it)
 #define TK_UNION		1025
 #define TK_UNSIGNED		1026
 #define TK_VOID			1027
-#define TK_WHILE		1028
-#define TK_H_ELSE		1029
-#define TK_H_ELIF		1030
-#define TK_H_ENDIF		1031
-#define TK_H_DEFINE		1032
-#define TK_DEFINED		1033
-#define TK_H_IF			1034
-#define TK_H_IFDEF		1035
-#define TK_H_IFNDEF		1036
-#define TK_H_INCLUDE	1037
-#define TK_H_UNDEF		1038
-#define TK_H_ERROR		1039
+#define TK_H_PRAGMA     1041
 
 // The base token iterator
 
@@ -673,6 +662,7 @@ token_iterator_p tokenizer_next(token_iterator_p token_it, bool skip_nl)
 		else if (eqstr("#include", token_it->token)) token_it->kind = TK_H_INCLUDE;
 		else if (eqstr("#undef",   token_it->token)) token_it->kind = TK_H_UNDEF;
 		else if (eqstr("#error",   token_it->token)) token_it->kind = TK_H_ERROR;
+		else if (eqstr("#pragma",  token_it->token)) token_it->kind = TK_H_PRAGMA;
 	}
 	else if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || ch == '_')
 	{
@@ -1532,6 +1522,13 @@ token_iterator_p conditional_iterator_next(token_iterator_p token_it, bool dummy
 			it->base.line  = it->_token_it->line;
 			it->base.column = it->_token_it->column;
 			return token_it;
+		}
+		else if (kind == TK_H_PRAGMA)
+		{
+			while (it->_token_it->kind != '\0' && it->_token_it->kind != '\n')
+				token_it_next(it->_token_it, FALSE);
+			if (it->_token_it->kind == '\n')
+				token_it_next(it->_token_it, TRUE);
 		}
 		else
 		{
