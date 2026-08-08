@@ -2556,7 +2556,9 @@ static char strbuf[MAX_CONST_STRLEN];
 		| integer
 		| char
 		| string
+		| '(' cast ')' expr   ???
 		| '(' expr ')'
+		| '{' expr ; '}'
 		.
 */
 
@@ -2647,6 +2649,17 @@ expr_p parse_primary_expr(void)
 		if (expr == NULL)
 			FAIL_NULL
 		if (!accept_term(')'))
+			FAIL_NULL
+		return expr;
+	}
+	if (accept_term('{'))
+	{
+		expr_p expr = parse_expr(); 
+		if (expr == NULL)
+			FAIL_NULL
+		if (!accept_term(';'))
+			FAIL_NULL
+		if (!accept_term('}'))
 			FAIL_NULL
 		return expr;
 	}
