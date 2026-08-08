@@ -69,19 +69,14 @@ void file_iterator_next(char_iterator_p char_it)
 	}
 }
 
-file_iterator_p new_file_iterator(const char* fn, const char *alt_fn)
+file_iterator_p new_file_iterator(const char* fn)
 {
 	file_iterator_p it = malloc(sizeof(struct file_iterator_s));
 	it->_f = fopen(fn, "r");
-	if (it->_f == 0 && alt_fn != 0)
-		it->_f = fopen(alt_fn, "r");
 	it->base.ch = '\n';
 	if (it->_f == 0)
 	{
-		printf("Could not open file %s", fn);
-		if (alt_fn != 0 && alt_fn[0] != '\0')
-			printf(" or %s", alt_fn);
-		printf("\n");
+		printf("Could not open file %s\n", fn);
 		it->base.ch = 0;
 	}
 	it->base.filename = copystr(fn);
@@ -1303,8 +1298,9 @@ int conditional_iterator_parse_or_expr(conditional_iterator_p it)
 
 char *include_path = 0;
 char *end_include_prefix = 0;
-char alt_include_path[1000];
-char *end_alt_include_prefix = 0;
+int nr_alt_include_paths = 0;
+char alt_include_path[10][1000];
+char *end_alt_include_prefix[10];
 char std_include_path[1000];
 char *end_std_include_prefix = 0;
 
@@ -1477,14 +1473,22 @@ token_iterator_p conditional_iterator_next(token_iterator_p token_it, bool dummy
 			if (it->_token_it->kind == '"')
 			{
 				strcpy(end_include_prefix, it->_token_it->token);
-				if (end_alt_include_prefix != 0)
-					strcpy(end_alt_include_prefix, it->_token_it->token);
+				char *inc_path = include_path;
+				int acc = access(inc_path, R_OK);
+				for (int i = 0; acc != 0 && i < nr_alt_include_paths; i++)
+				{
+					strcpy(end_alt_include_prefix[i], it->_token_it->token);
+					inc_path = alt_include_path[i];
+					acc = access(inc_path, R_OK);
+				}
+				if (acc != 0)
+					inc_path = include_path;
 				while (it->_token_it->kind != '\n')
 				{
 					token_it_next(it->_token_it, FALSE);
 				}
-				//printf("INCLUDE '%s'\n", include_path);
-				input_it = new_file_iterator(include_path, alt_include_path);
+				//printf("INCLUDE '%s'\n", inc_path);
+				input_it = new_file_iterator(inc_path);
 				if (input_it->base.ch != 0)
 				{
 					splice_it = new_line_splice_iterator(&input_it->base);
@@ -1508,7 +1512,7 @@ token_iterator_p conditional_iterator_next(token_iterator_p token_it, bool dummy
 				while (it->_token_it->kind != '\n')
 					token_it_next(it->_token_it, FALSE);
 
-				input_it = new_file_iterator(std_include_path, 0);
+				input_it = new_file_iterator(std_include_path);
 				if (input_it->base.ch != 0)
 				{
 					splice_it = new_line_splice_iterator(&input_it->base);
@@ -1927,8 +1931,8 @@ void output_preprocessor(const char *filename)
 	}
 
 	fprintf(fout, "\n\nDone\n");	
-	if (fout != stdout) 
-	fclose(fout);
+	if (fout != stdout)
+		fclose(fout);
 }
 
 // Types
@@ -2655,7 +2659,7 @@ expr_p parse_primary_expr(void)
 	}
 	if (accept_term('{'))
 	{
-		expr_p expr = parse_expr(); 
+		expr_p expr = parse_expr();
 		if (expr == NULL)
 			FAIL_NULL
 		if (!accept_term(';'))
@@ -3973,8 +3977,11 @@ bool parse_statement(bool in_block)
 			FAIL_FALSE
 		if (!accept_term(';'))
 			FAIL_FALSE
-		statement_p statement = add_statement(TK_DO, label, &location, comment, from);
-		statement->expr = cond;
+		if (cond != NULL && cond->kind != '0' && cond->int_val != 0)
+		{
+			statement_p statement = add_statement(TK_DO, label, &location, comment, from);
+			statement->expr = cond;
+		}
 		return TRUE;
 	}
 	if (accept_term(TK_FOR))
@@ -4188,7 +4195,7 @@ bool parse_file(const char *input_filename, bool only_preprocess)
 		if (*s == '/')
 			end_include_prefix = s + 1;
 
-	file_iterator_p input_it = new_file_iterator(input_filename, 0);
+	file_iterator_p input_it = new_file_iterator(input_filename);
 	if (input_it->base.ch == '\0')
 	{
 		printf("ERROR: Could not open file %s or it was empty\n", input_filename);

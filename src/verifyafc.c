@@ -98,8 +98,9 @@ int main(int argc, char *argv[])
 			opt_trace_parser = TRUE;
 		else if (eqstr(argv[i], "-I") && i + 1 < argc)
 		{
-			strcpy(alt_include_path, argv[++i]);
-			end_alt_include_prefix = alt_include_path + strlen(alt_include_path);
+			strcpy(alt_include_path[nr_alt_include_paths], argv[++i]);
+			end_alt_include_prefix[nr_alt_include_paths] = alt_include_path[nr_alt_include_paths] + strlen(alt_include_path[nr_alt_include_paths]);
+			nr_alt_include_paths++;
 		}
 		else if (eqstr(argv[i], "-D") && i + 1 < argc)
 		{
@@ -138,7 +139,7 @@ int main(int argc, char *argv[])
 		}
 		else if (eqstr(argv[i], "-o") && i + 1 < argc)
 			output_filename = argv[++i];
-		else if (has_extention(argv[i], ".c"))
+		else if (has_extention(argv[i], ".c") || has_extention(argv[i], ".h"))
 		{
 			if (!init)
 			{
