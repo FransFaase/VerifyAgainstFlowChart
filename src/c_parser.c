@@ -3394,7 +3394,7 @@ bool parse_array_indexes(type_p type, type_p *arr_type)
 		.
 */
 
-bool parse_declaration(bool is_param)
+bool parse_declaration(bool is_param, bool with_field_width)
 {
 	storage_type_e storage_type = ST_NONE;
 	for (;;)
@@ -3495,7 +3495,7 @@ bool parse_declaration(bool is_param)
 							var_params = TRUE;
 							break;
 						}
-						if (!parse_declaration(TRUE))
+						if (!parse_declaration(TRUE, FALSE))
 							FAIL_FALSE;
 					} while (accept_term(','));
 					if (!accept_term(')'))
@@ -3571,6 +3571,12 @@ bool parse_declaration(bool is_param)
 			}
 			decl->type = type;
 			decl->storage_type = storage_type;
+			if (with_field_width && accept_term(':'))
+			{
+				// Just ignore the field width
+				if (!accept_term('0'))
+					FAIL_FALSE
+			}
 			if (accept_term('='))
 			{
 				decl->value = parse_initializer();
@@ -3757,7 +3763,7 @@ type_p parse_struct_or_union_specifier(decl_kind_e decl_kind)
 		decl_p save_ident_decls = cur_ident_decls;
 		do
 		{
-			if (!parse_declaration(FALSE))
+			if (!parse_declaration(FALSE, TRUE))
 				FAIL_NULL
 		} while (!accept_term('}'));
 		int nr_decls = 0;
@@ -3990,7 +3996,7 @@ bool parse_statement(bool in_block)
 		if (!accept_term('('))
 			FAIL_FALSE
 		int from = cur_nr_statements;
-		if (!parse_declaration(FALSE))
+		if (!parse_declaration(FALSE, FALSE))
 		{
 			add_statement('i', 0, &location, NULL, -1);
 			if (!accept_term(';'))
@@ -4155,7 +4161,7 @@ bool parse_statements(location_p location)
 	decl_p save_ident_decls = cur_ident_decls;
 	do
 	{
-	} while (token_it->kind != '}' && (parse_declaration(FALSE) || parse_statement(FALSE)));
+	} while (token_it->kind != '}' && (parse_declaration(FALSE, FALSE) || parse_statement(FALSE)));
 	if (location != NULL)
 		add_statement('{', NULL, location, NULL, from);
 	cur_ident_decls = save_ident_decls;
@@ -4218,7 +4224,7 @@ bool parse_file(const char *input_filename, bool only_preprocess)
 		return TRUE;
 	}
 
-	while (parse_declaration(FALSE))
+	while (parse_declaration(FALSE, FALSE) || accept_term(';'))
 	{
 	}
 

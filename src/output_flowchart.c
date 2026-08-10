@@ -29,8 +29,8 @@ void output_edge(FILE *f, block_p from, block_p to, edge_type_t edge_type)
     else if (from->x > to->x && to->output_nr > from->output_nr)
     {
         bool lane_is_free = TRUE;
-        for (block_p next_in_flow = from->next_in_flow; next_in_flow->output_nr < to->output_nr; next_in_flow = next_in_flow->next_in_flow)
-            if (next_in_flow->x == from->x)
+        for (block_p next = from->next_all; next->output_nr < to->output_nr; next = next->next_all)
+            if (next->x == from->x)
             {
                 lane_is_free = FALSE;
                 break;
@@ -151,15 +151,22 @@ void output_flowchart(const char *filename, bool only_c)
         if (block->in_trans == NULL && block->nr_statements > 0 && (!only_c || has_extention(block->statements[0]->filename, ".c")))
         {
             y_offset = 0;
-            ref_next_in_flow = NULL;
-            set_y_offset(block);
+            block->output_nr = output_nr++;
+            block->y = 0;
+            for (block_p next = block->next; next != NULL && next->in_trans != NULL; next = next->next_all)
+            {
+                next->output_nr = output_nr++;
+                y_offset += in_lane_height;
+                next->y = y_offset;
+            }
+            
             set_x_offset(block, max_x_offset);
             max_x_offset += lane_width;
             block_p escape_lanes[20];
             int nr_escape_lanes = 0;
             int max_nr_escape_lanes = 0;
             // Calculate escapes
-            for (block_p from = block->next; from != NULL; from = from->next_in_flow)
+            for (block_p from = block->next; from != NULL && from->in_trans != NULL; from = from->next_all)
             {
                 for (int i = 0; i < nr_escape_lanes; i++)
                     if (escape_lanes[i] == from)
@@ -181,8 +188,8 @@ void output_flowchart(const char *filename, bool only_c)
                 else
                 {
                     bool lane_is_free = TRUE;
-                    for (block_p next_in_flow = from->next_in_flow; next_in_flow->output_nr < to->output_nr; next_in_flow = next_in_flow->next_in_flow)
-                        if (next_in_flow->x == from->x)
+                    for (block_p next_all = from->next_all; next_all->output_nr < to->output_nr; next_all = next_all->next_all)
+                        if (next_all->x == from->x)
                         {
                             lane_is_free = FALSE;
                             break;
