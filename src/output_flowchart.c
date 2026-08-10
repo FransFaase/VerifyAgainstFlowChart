@@ -16,6 +16,8 @@ enum edge_type_e
 
 void output_edge(FILE *f, block_p from, block_p to, edge_type_t edge_type)
 {
+    if (from->output_nr < 0 || to->output_nr < 0)
+        return;
     static int edge_nr = 0;
     fprintf(f, 
         "<edge id=\"e%d\" source=\"n%d\" target=\"n%d\">\n"
@@ -27,8 +29,8 @@ void output_edge(FILE *f, block_p from, block_p to, edge_type_t edge_type)
     else if (from->x > to->x && to->output_nr > from->output_nr)
     {
         bool lane_is_free = TRUE;
-        for (block_p next_all = from->next_all; next_all->output_nr < to->output_nr; next_all = next_all->next_all)
-            if (next_all->x == from->x)
+        for (block_p next_in_flow = from->next_in_flow; next_in_flow->output_nr < to->output_nr; next_in_flow = next_in_flow->next_in_flow)
+            if (next_in_flow->x == from->x)
             {
                 lane_is_free = FALSE;
                 break;
@@ -67,16 +69,34 @@ void output_edge(FILE *f, block_p from, block_p to, edge_type_t edge_type)
 
 int max_x_offset = 0;
 
-void set_x_offset(block_p block, int offset)
+void set_x_offset(block_p block, int x_offset)
 {
     if (block == NULL || block->x != -1)
         return;
     
-    if (offset > max_x_offset)
-        max_x_offset = offset;
-    block->x = offset;
-    set_x_offset(block->next, offset);
-    set_x_offset(block->alt, offset + lane_width);
+    if (x_offset > max_x_offset)
+        max_x_offset = x_offset;
+    block->x = x_offset;
+    set_x_offset(block->next, x_offset);
+    set_x_offset(block->alt, x_offset + lane_width);
+}
+
+int output_nr = 0;
+int y_offset = 0;
+block_p *ref_next_in_flow = NULL;
+
+void set_y_offset(block_p block)
+{
+    if (block == NULL || block->y != -1)
+        return;
+    block->output_nr = output_nr++;
+    if (ref_next_in_flow != NULL)
+        *ref_next_in_flow = block;
+    ref_next_in_flow = &block->next_in_flow;
+    block->y = y_offset;
+    y_offset += in_lane_height;
+    set_y_offset(block->alt);
+    set_y_offset(block->next);
 }
 
 void output_text(FILE *f, const char *s)
@@ -101,7 +121,7 @@ void output_text(FILE *f, const char *s)
             fprintf(f, "%c", *s);
 }
 
-void output_flowchart(const char *filename)
+void output_flowchart(const char *filename, bool only_c)
 {
     FILE *f = fopen(filename, "w");
     if (f == NULL)
@@ -125,23 +145,21 @@ void output_flowchart(const char *filename)
             "<key for=\"edge\" id=\"d10\" yfiles.type=\"edgegraphics\"/>\n"
             "<graph edgedefault=\"directed\" id=\"G\">\n"
                 "<data key=\"d0\" xml:space=\"preserve\"/>\n");
-    int output_nr = 0;
-    for (block_p block = all_blocks; block != NULL; block = block->next_all)
-        block->output_nr = output_nr++;
 
-    int y = 0;
     for (block_p block = all_blocks; block != NULL; block = block->next_all)
     {
-        if (block->in_trans == NULL)
+        if (block->in_trans == NULL && block->nr_statements > 0 && (!only_c || has_extention(block->statements[0]->filename, ".c")))
         {
-            y = 0;
+            y_offset = 0;
+            ref_next_in_flow = NULL;
+            set_y_offset(block);
             set_x_offset(block, max_x_offset);
             max_x_offset += lane_width;
             block_p escape_lanes[20];
             int nr_escape_lanes = 0;
             int max_nr_escape_lanes = 0;
             // Calculate escapes
-            for (block_p from = block->next; from != NULL && from->in_trans != NULL; from = from->next_all)
+            for (block_p from = block->next; from != NULL; from = from->next_in_flow)
             {
                 for (int i = 0; i < nr_escape_lanes; i++)
                     if (escape_lanes[i] == from)
@@ -163,8 +181,8 @@ void output_flowchart(const char *filename)
                 else
                 {
                     bool lane_is_free = TRUE;
-                    for (block_p next_all = from->next_all; next_all->output_nr < to->output_nr; next_all = next_all->next_all)
-                        if (next_all->x == from->x)
+                    for (block_p next_in_flow = from->next_in_flow; next_in_flow->output_nr < to->output_nr; next_in_flow = next_in_flow->next_in_flow)
+                        if (next_in_flow->x == from->x)
                         {
                             lane_is_free = FALSE;
                             break;
@@ -222,31 +240,30 @@ void output_flowchart(const char *filename)
             }
             max_x_offset += max_nr_escape_lanes * escape_width + lane_width;
         }
-        block->y = y;
-        y += in_lane_height;
     }
 
     for (block_p block = all_blocks; block != NULL; block = block->next_all)
-    {
-        fprintf(f, "<node id=\"n%d\">\n"
-            "<data key=\"d6\">\n"
-            "<y:GenericNode configuration=\"com.yworks.flowchart.%s\">\n"
-            "<y:Geometry height=\"%d\" width=\"%d\" x=\"%d\" y=\"%d\"/>\n"
-            "<y:Fill color=\"#E8EEF7\" color2=\"#B7C9E3\" transparent=\"false\"/>\n"
-            "<y:BorderStyle color=\"#000000\" type=\"line\" width=\"1.0\"/>\n"
-            "<y:NodeLabel alignment=\"center\" autoSizePolicy=\"content\" fontFamily=\"Dialog\" fontSize=\"12\" fontStyle=\"plain\" hasBackgroundColor=\"false\" hasLineColor=\"false\" height=\"17.96875\" horizontalTextPosition=\"center\" iconTextGap=\"4\" modelName=\"custom\" textColor=\"#000000\" verticalTextPosition=\"bottom\" visible=\"true\" width=\"104.453125\" x=\"21.2734375\" xml:space=\"preserve\" y=\"11.015625\">",
-                block->output_nr, 
-                block->in_trans == NULL ? "start1" :
-                block->next == NULL ? "terminator" :
-                block->alt != NULL ? "decision" : "process",
-                height, width, block->x, block->y);
-        output_text(f, block->comment);
-        fprintf(f,
-            "<y:LabelModel><y:SmartNodeLabelModel distance=\"4.0\"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX=\"0.0\" labelRatioY=\"0.0\" nodeRatioX=\"0.0\" nodeRatioY=\"0.0\" offsetX=\"0.0\" offsetY=\"0.0\" upX=\"0.0\" upY=\"-1.0\"/></y:ModelParameter></y:NodeLabel>\n"
-            "</y:GenericNode>\n"
-            "</data>\n"
-            "</node>\n");
-    }
+        if (block->output_nr >= 0)
+        {
+            fprintf(f, "<node id=\"n%d\">\n"
+                "<data key=\"d6\">\n"
+                "<y:GenericNode configuration=\"com.yworks.flowchart.%s\">\n"
+                "<y:Geometry height=\"%d\" width=\"%d\" x=\"%d\" y=\"%d\"/>\n"
+                "<y:Fill color=\"#E8EEF7\" color2=\"#B7C9E3\" transparent=\"false\"/>\n"
+                "<y:BorderStyle color=\"#000000\" type=\"line\" width=\"1.0\"/>\n"
+                "<y:NodeLabel alignment=\"center\" autoSizePolicy=\"content\" fontFamily=\"Dialog\" fontSize=\"12\" fontStyle=\"plain\" hasBackgroundColor=\"false\" hasLineColor=\"false\" height=\"17.96875\" horizontalTextPosition=\"center\" iconTextGap=\"4\" modelName=\"custom\" textColor=\"#000000\" verticalTextPosition=\"bottom\" visible=\"true\" width=\"104.453125\" x=\"21.2734375\" xml:space=\"preserve\" y=\"11.015625\">",
+                    block->output_nr, 
+                    block->in_trans == NULL ? "start1" :
+                    block->next == NULL ? "terminator" :
+                    block->alt != NULL ? "decision" : "process",
+                    height, width, block->x, block->y);
+            output_text(f, block->comment);
+            fprintf(f,
+                "<y:LabelModel><y:SmartNodeLabelModel distance=\"4.0\"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX=\"0.0\" labelRatioY=\"0.0\" nodeRatioX=\"0.0\" nodeRatioY=\"0.0\" offsetX=\"0.0\" offsetY=\"0.0\" upX=\"0.0\" upY=\"-1.0\"/></y:ModelParameter></y:NodeLabel>\n"
+                "</y:GenericNode>\n"
+                "</data>\n"
+                "</node>\n");
+        }
     for (block_p block = all_blocks; block != NULL; block = block->next_all)
     {
         if (block->next != NULL)

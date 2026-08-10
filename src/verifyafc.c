@@ -37,6 +37,14 @@ char* copystrlen(const char* str, int len)
 	return new_str;
 }
 
+bool has_extention(const char *filename, const char *ext)
+{
+	int len_fn = strlen(filename);
+	int len_ext = strlen(ext);
+	return len_fn > len_ext && strcmp(filename + len_fn - len_ext, ext) == 0; 
+}
+
+
 // Include C parser
 
 #include "c_parser.c"
@@ -58,13 +66,6 @@ char* copystrlen(const char* str, int len)
 #include "output_flowchart.c"
 
 // Main
-
-bool has_extention(const char *filename, const char *ext)
-{
-	int len_fn = strlen(filename);
-	int len_ext = strlen(ext);
-	return len_fn > len_ext && strcmp(filename + len_fn - len_ext, ext) == 0; 
-}
 
 int main(int argc, char *argv[])
 {
@@ -168,9 +169,10 @@ int main(int argc, char *argv[])
 		return 0;
 
 	construct_blocks();
+	print_blocks();
 
 	if (output_filename != NULL)
-		output_flowchart(output_filename);
+		output_flowchart(output_filename, TRUE);
 	else
 		compare_all();
 	

@@ -5,6 +5,7 @@ typedef struct transition_s *transition_p;
 
 struct block_s
 {
+    int nr;
     int start_line;
     char *comment;
     int nr_statements;
@@ -20,6 +21,7 @@ struct block_s
     int y;
     int escape;
     block_p next_all;
+    block_p next_in_flow;
 };
 
 struct transition_s
@@ -40,27 +42,22 @@ block_p new_block(void)
     block->alt = NULL;
     block->in_trans = NULL;
     block->node = NULL;
-    block->output_nr = 0;
+    block->output_nr = -1;
     block->x = -1;
-    block->y = 0;
+    block->y = -1;
     block->escape = -1;
     block->next_all = NULL;
+    block->next_in_flow = NULL;
     return block;
 }
 
+int block_nr = 0;
 block_p all_blocks = NULL;
-
-void add_block_at_start_line(block_p block)
-{
-    block_p *ref_block = &all_blocks;
-    while (*ref_block != NULL && (*ref_block)->start_line <= block->start_line)
-        ref_block = &(*ref_block)->next_all;
-    block->next_all = *ref_block;
-    *ref_block = block;
-}
+block_p *ref_next_block = &all_blocks;
 
 void add_block(block_p block)
 {
+    block->nr = block_nr++;
     if (block->nr_statements == 0)
     {
         printf("Error: block has no statements\n");
@@ -72,7 +69,8 @@ void add_block(block_p block)
         return;
     }
     block->start_line = block->statements[0]->line;
-    add_block_at_start_line(block);
+    *ref_next_block = block;
+    ref_next_block = &block->next_all;
 }
 
 void block_add_transition(block_p from, block_p to)
@@ -276,11 +274,7 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
             construct_blocks_from_statement(&statement->children[2], block->alt, for_next_block, next, TRUE);
         }
         if (for_next_block != block)
-        {
-            for (block_p body_block = block->alt; body_block != for_next_block; body_block = body_block->next)
-                for_next_block->start_line = body_block->start_line;
-            add_block_at_start_line(for_next_block);
-        }
+            add_block(for_next_block);
     }
     else if (any)
     {
@@ -376,7 +370,7 @@ void print_blocks(void)
     printf("\n\n");
     for (block_p block = all_blocks; block != NULL; block = block->next_all)
     {
-        printf("block %d", block->start_line);
+        printf("block %d", block->nr);
         if (block->comment != NULL)
             printf(" '%s'", block->comment);
         if (block->in_trans != NULL)
@@ -384,14 +378,14 @@ void print_blocks(void)
             const char *s = " from";
             for (transition_p trans = block->in_trans; trans != NULL; trans = trans->next_in_trans)
             {
-                printf("%s %d", s, trans->from->start_line);
+                printf("%s %d", s, trans->from->nr);
                 //s = ",";
             }
         }
         if (block->alt != 0)
-            printf(" alt %d", block->alt->start_line);
+            printf(" alt %d", block->alt->nr);
         if (block->next != 0)
-            printf(" next %d", block->next->start_line);
+            printf(" next %d", block->next->nr);
         printf(" : %d", block->nr_statements);
         for (int j = 0; j < block->nr_statements; j++)
             printf(" stat %d", block->statements[j]->line);
