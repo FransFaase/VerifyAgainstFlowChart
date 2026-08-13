@@ -90,6 +90,11 @@ int parse_node_id(const char *s)
 void parse_flowchart(const char *filename)
 {
     FILE *f = fopen(filename, "r");
+    if (f == NULL)
+    {
+        fprintf(stderr, "Could not open file '%s'\n", filename);
+        return;
+    }
     xmliter_t xmliter;
     xmliter_init(&xmliter, f);
     fclose(f);
