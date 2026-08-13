@@ -192,6 +192,8 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
         {
             block->statements = &statement->children[i];
             block->nr_statements = 0;
+            bool has_default = FALSE;
+            expr_p cond = NULL;
             for (; i < statement->nr_children && case_or_default_statement(statement->children[i]); i++)
             {
                 if (block->comment == NULL)
@@ -202,26 +204,31 @@ void construct_blocks_from_statement(statement_p *statements, block_p block, blo
                     compare = new_diop_expr(TK_EQ, statement->expr, statement->children[i]->expr);
                 else
                 {
+                    has_default = TRUE;
                     compare = new_expr('0', 1);
                     compare->int_val = 1;
                 }
-                block->cond = block->cond == NULL ? compare : new_diop_expr(TK_OR, block->cond, compare);
+                cond = cond == NULL ? compare : new_diop_expr(TK_OR, block->cond, compare);
             }
-            add_block(block);
             int nr_case_stat = 0;
             while (i + nr_case_stat < statement->nr_children && !case_or_default_statement(statement->children[i + nr_case_stat]))
                 nr_case_stat++;
             block_p next_block = NULL;
             if (i + nr_case_stat < statement->nr_children)
                 next_block = new_block();
-            block_set_next(block, next_block != NULL ? next_block : next);
-            
-            block_p child_block = new_block();
-            block_set_alt(block, child_block);
+            if (!has_default)
+            {
+                block->cond = cond;
+                add_block(block);
+                block_set_next(block, next_block != NULL ? next_block : next);
+                block_p child_block = new_block();
+                block_set_alt(block, child_block);
 
-            construct_blocks_from_statements(&statement->children[i], nr_case_stat, child_block, next_block, next);
+                construct_blocks_from_statements(&statement->children[i], nr_case_stat, child_block, next_block, next);
+            }
+            else
+                construct_blocks_from_statements(&statement->children[i], nr_case_stat, block, next_block, next);
             i += nr_case_stat - 1;
-
             block = next_block;
         }
     }
