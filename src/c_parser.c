@@ -2368,10 +2368,13 @@ int expr_eval(expr_p expr)
 		case '0': return expr->int_val;
 		case '+': return expr_eval(expr->children[0]) + expr_eval(expr->children[1]);
 		case '-': return expr_eval(expr->children[0]) - expr_eval(expr->children[1]);
+		case '*': return expr_eval(expr->children[0]) * expr_eval(expr->children[1]);
 		case '/': return expr_eval(expr->children[0]) / expr_eval(expr->children[1]);
 		case '|': return expr_eval(expr->children[0]) | expr_eval(expr->children[1]);
+		case '&': return expr_eval(expr->children[0]) & expr_eval(expr->children[1]);
 		case OPER_MIN: return -expr_eval(expr->children[0]);
 		case TK_SHL: return expr_eval(expr->children[0]) << expr_eval(expr->children[1]);
+		case TK_SHR: return expr_eval(expr->children[0]) >> expr_eval(expr->children[1]);
 		case 'i':
 		{
 			decl_p expr_decl = find_decl(DK_IDENT, expr->str_val);
@@ -4085,7 +4088,7 @@ bool parse_statement(bool in_block)
 				if (token_it->kind == TK_BREAK || token_it->kind == TK_RETURN || token_it->kind == TK_GOTO)
 					has_break = TRUE;
 				label_statement = FALSE;
-				bool go = parse_statement(FALSE);
+				bool go = parse_declaration(FALSE, FALSE) || parse_statement(FALSE);
 				if (label_statement)
 					has_break = FALSE;
 				if (!go)
