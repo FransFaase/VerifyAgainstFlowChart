@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 	print_blocks();
 
 	if (output_filename != NULL)
-		output_flowchart(output_filename, TRUE);
+		output_flowchart(output_filename, FALSE);
 	else
 		compare_all();
 	

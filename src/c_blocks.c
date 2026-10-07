@@ -358,7 +358,7 @@ void construct_blocks(void)
     for (int i = 0; i < cur_nr_statements; i++)
     {
         statement_p statement = cur_statements[i];
-        if (statement->kind == 'D' && statement->decl->type->kind == TYPE_KIND_FUNCTION)
+        if (statement->kind == 'D' && statement->decl->type->kind == TYPE_KIND_FUNCTION && statement->decl->storage_type != ST_INLINE)
         {
             block_p function_block = new_block();
             function_block->nr_statements = 1;

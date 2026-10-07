@@ -2246,6 +2246,7 @@ typedef enum {
 	ST_TYPEDEF,
 	ST_CONST,
 	ST_EXTERN,
+	ST_INLINE,
 } storage_type_e;
 
 struct decl_s
@@ -3414,6 +3415,7 @@ bool parse_declaration(bool is_param, bool with_field_width)
 		}
 		else if (accept_term(TK_INLINE))
 		{
+			storage_type = ST_INLINE;
 		}
 		else if (accept_term(TK_VOLATILE))
 		{
@@ -3520,6 +3522,7 @@ bool parse_declaration(bool is_param, bool with_field_width)
 						parameters[--i] = decl1;
 					type_set_decls(type, nr_parameters, parameters);
 					decl->type = type;
+					decl->storage_type = storage_type;
 					if (accept_term('{'))
 					{
 						inside_function = TRUE;
